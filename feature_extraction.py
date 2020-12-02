@@ -43,7 +43,7 @@ def ler_dados_wica(sec, subj, film):
 
 #   A única diferença para a função que eu usava antes é o mode="magnitude", que melhorou meus resultados.
 def spectrogram2(data, eletr):
-    f, t, Sxx = sp.spectrogram(np.array(data[eletr]), SR_const, "hann", window_size, nfft=window_size, noverlap=0, scaling="spectrum", mode="magnitude")
+    f, t, Sxx = sp.spectrogram(np.array(data[eletr]), SR_const, window=sp.get_window("hann", 4000), nfft=4000, noverlap=0, scaling="spectrum")
     return [f, t, Sxx]
 
 #   Tenho duas funções para fazer a extração de características porque ficou subjetivo no paper no qual me baseei qual seria a ordem das operações, mas a que mais confio nos resultados é a averageBand2_spec2
@@ -62,7 +62,7 @@ def averageBand_spec2(data):
             for b in range(5):
                 #   Para cada frequência do eletrodo
                 if b == 0:
-                    low = 0
+                    low = 1
                     high = 3
                 elif b == 1:
                     low = 4
@@ -75,8 +75,8 @@ def averageBand_spec2(data):
                     high = 30
                 elif b == 4:
                     low = 31
-                    high = 51
-                idx_band = np.logical_and(f >= low, f < high)
+                    high = 50
+                idx_band = np.logical_and(f >= low, f <= high)
                 eletrs[el][T][b] = temp[T][idx_band].sum() / np.count_nonzero(idx_band)
 
     indicesAssim = []
@@ -110,7 +110,7 @@ def averageBand2_spec2(data):
             for b in range(5):
                 #   Para cada frequência do eletrodo
                 if b == 0:
-                    low = 0
+                    low = 1
                     high = 3
                 elif b == 1:
                     low = 4
@@ -123,8 +123,8 @@ def averageBand2_spec2(data):
                     high = 30
                 elif b == 4:
                     low = 31
-                    high = 51
-                idx_band = np.logical_and(f >= low, f < high)
+                    high = 50
+                idx_band = np.logical_and(f >= low, f <= high)
                 eletrs[el][T][b] = temp[T][idx_band].sum() / np.count_nonzero(idx_band)
     return [eletrs, data[2][0]]
 
@@ -191,5 +191,5 @@ def data_full(subjFrom, subjTo):
 
     print("[*] Terminado.")
 
-for subj in range(1, 16):
+for subj in range(12, 13):
     data_full(subj, subj + 1)    #   Salvará as características de todos os subjs de 1 até 15 

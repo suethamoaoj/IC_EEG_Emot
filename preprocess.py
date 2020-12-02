@@ -1,12 +1,14 @@
 #   Este script serve para carregar os dados crus que estão em formato txt, preprocessá-los e salvá-los.
 
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
 import mne
 from ica import ica1
 from rwt.wavelets import *
 from rwt.utilities import *
 from rwt import rdwt, irdwt
 import numpy as np
-import matplotlib.pyplot as plt
+
 import scipy.signal as sp
 import math
 
@@ -16,7 +18,7 @@ pasta_raw = "../raw"
 pasta_wica = "wica_raw"
 SR_const = 1000 #   Sampling rate
 QTD_comps = 60  #   Quantidade de componentes a seres usados no wICA
-Kthr = 1.25     #   Threshold dos artefatos. Padrão: 1.15
+Kthr = 2.00     #   Threshold dos artefatos. Padrão: 1.15
 
 
 #   Lê os dados de um subj em uma seção em um filme e transforma-os em um objeto mne.raw
@@ -89,25 +91,40 @@ def wica(data):
         id_artef = np.setdiff1d(list(range(0, N)), id_noise)
         
         if len(id_artef) > 0:
-            print("[*] Artefatos encontrados")
-            thld = Thr
+            print("[*] Artefatos encontrados", Thr)
+            
+            
+            thld = 3.6
             KK = 100
             LL = math.floor(math.log(len(Y), 2))
             x1, xh, _ = rdwt(Y, h[0], h[1], LL)
-            inc = thld / 10
+            inc = 10
+
+            thld = thld * 10e-6
+            inc = inc * 10e-6
 
             while KK > Kthr:
                 thld = thld + inc
                 xh = hardThreshold(xh, thld)
                 xd, _ = irdwt(x1, xh, h[0], h[1], LL)
                 xn = np.subtract(Y, xd)
-                break
-                print("[*] Calculando ratios")
+                print("[*] Calculando ratios", KK)
                 cn = np.corrcoef(Y[id_noise], xn[id_noise])
                 cd = np.corrcoef(Y[id_noise], xd[id_noise])
                 ca = np.corrcoef(Y[id_artef], xd[id_artef])
                 KK = ca[0][1] / cn[0][1]
                 KKnew = ca[0][1] / cd[0][1]
+            
+
+            #thld = Thr                              #
+            #thld = thld + (thld / 10)               #
+            #LL = math.floor(math.log(len(Y), 2))    #
+            #x1, xh, _ = rdwt(Y, h[0], h[1], LL)     #
+                                                    #
+            #xh = hardThreshold(xh, thld)            #
+            #xd, _ = irdwt(x1, xh, h[0], h[1], LL)   #
+            #xn = np.subtract(Y, xd)                 #
+
 
             opt[c] = thld
             print("[*] thld:", thld)
@@ -139,7 +156,29 @@ def wica(data):
     )
 
     artRemEEG = mne.io.RawArray(dataWica, info)
+    idxes_elet = [23, 14, 41, 16]
+    names_elet = ["T7", "FT7", "P7", "FC3"]
+    
+    
+    plt.figure()
+    for ind, el in enumerate(idxes_elet):
+        sub = plt.subplot(4, 1, ind + 1)
+        plt.ylim(-0.0005, 0.0005)
+        sub.title.set_text(names_elet[ind])
+        plt.plot(raw.get_data()[el][:5000])
+    PdfPages("sem_wica.pdf").savefig()
 
+    plt.figure()
+    for ind, el in enumerate(idxes_elet):
+        sub = plt.subplot(4, 1, ind + 1)
+        plt.ylim(-0.0005, 0.0005)
+        sub.title.set_text(names_elet[ind])
+        plt.plot(artRemEEG.get_data()[el][:5000]) 
+    PdfPages("sem_wica.pdf").savefig()
+       
+    
+    plt.show()
+    exit()
     return artRemEEG
 
 #   Salva os dados na pasta de dados preprocessados previamente definida
@@ -165,5 +204,5 @@ def salvar_dados(subj):
 
                 f.write(stringTotal)
 
-for subj in range(1, 16):   #   Preprocessa e salva os dados para os subjects na range
+for subj in range(2, 3):   #   Preprocessa e salva os dados para os subjects na range
     salvar_dados(subj)
